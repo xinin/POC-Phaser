@@ -5,21 +5,24 @@ BasicGame.Game = function (game) {
 
 BasicGame.Game.prototype = {
 
-  //preload: function () {
-  //  this.load.image('sea', 'assets/sea.png');
-  //  this.load.image('bullet', 'assets/bullet.png');
-  //  this.load.spritesheet('greenEnemy', 'assets/enemy.png', 32, 32);
-  //  this.load.spritesheet('explosion', 'assets/explosion.png', 32, 32);
-  //},
-
   create: function () {
 
     this.sea = this.add.tileSprite(0, 0, 800, 600, 'sea');
 
-    this.bullet = this.add.sprite(400, 300, 'bullet');
-    this.bullet.anchor.setTo(0.5, 0.5);
-    this.physics.enable(this.bullet, Phaser.Physics.ARCADE);
-    this.bullet.body.velocity.y = -500;
+    this.player = this.add.sprite(400,500,'player');
+    this.player.anchor.setTo(0.5,0.5);
+    this.player.animations.add('fly',[0, 1, 2], 20, true);
+    this.player.play('fly');
+    this.physics.enable(this.player,Phaser.Physics.ARCADE);
+    this.player.speed = 300;
+    this.player.body.collideWorldBounds = true;
+
+    this.cursors = this.input.keyboard.createCursorKeys();
+
+    this.bullets = [];
+
+    this.nextShotAt = 0;
+    this.shotDelay = 100;
 
     this.enemy = this.add.sprite(400, 200, 'greenEnemy');
     this.enemy.animations.add('fly', [ 0, 1, 2 ], 20, true);
@@ -32,8 +35,43 @@ BasicGame.Game.prototype = {
   update: function () {
     this.sea.tilePosition.y += 0.2;
 
-    this.physics.arcade.overlap(this.bullet, this.enemy, this.enemyHit, null, this);
+    for(var i = 0; i < this.bullets.length; i++){
+      this.physics.arcade.overlap(this.bullets[i], this.enemy, this.enemyHit, null, this);
+    }
 
+
+    this.player.body.velocity.x= 0;
+    this.player.body.velocity.y= 0;
+
+    if(this.cursors.left.isDown){
+      this.player.body.velocity.x = - this.player.speed;
+    }
+    else if(this.cursors.right.isDown){
+      this.player.body.velocity.x = this.player.speed;
+    }
+
+    if(this.cursors.up.isDown){
+      this.player.body.velocity.y = - this.player.speed;
+    }
+    else if(this.cursors.down.isDown){
+      this.player.body.velocity.y = this.player.speed;
+    }
+
+    if(this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)){
+      this.fire();
+    }
+
+  },
+
+  fire: function (){
+    if (this.nextShotAt < this.time.now) {
+      this.nextShotAt = this.time.now + this.shotDelay;
+      var bullet = this.add.sprite(this.player.x, this.player.y-20, 'bullet');
+      bullet.anchor.setTo(0.5, 0.5);
+      this.physics.enable(bullet, Phaser.Physics.ARCADE);
+      bullet.body.velocity.y = -500;
+      this.bullets.push(bullet);
+    }
   },
 
   enemyHit: function (bullet, enemy) {
@@ -47,8 +85,11 @@ BasicGame.Game.prototype = {
   },
 
   render: function() {
-    this.game.debug.body(this.bullet);
+    for(var i = 0; i < this.bullets.length; i++) {
+      this.game.debug.body(this.bullets[i]);
+    }
     this.game.debug.body(this.enemy);
+    this.game.debug.body(this.player);
   },
 
   quitGame: function (pointer) {
