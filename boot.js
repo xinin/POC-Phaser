@@ -37,7 +37,7 @@ var BasicGame = {
   PLAYER_EXTRA_LIVES: 3,
   PLAYER_GHOST_TIME: Phaser.Timer.SECOND * 3,
 
-  INSTRUCTION_EXPIRE: Phaser.Timer.SECOND * 10,
+  INSTRUCTION_EXPIRE: Phaser.Timer.SECOND * 4,
   RETURN_MESSAGE_DELAY: Phaser.Timer.SECOND * 2
 };
 

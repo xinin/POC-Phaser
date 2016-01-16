@@ -7,31 +7,33 @@ BasicGame.Game.prototype = {
 
   create: function () {
 
-    this.sea = this.add.tileSprite(0, 0, 800, 600, 'sea');
+    this.setupBackground();
+    this.setupPlayer();
+    this.setupEnemies();
+    this.setupBullets();
+    this.setupExplosions();
+    this.setupText();
 
-    this.player = this.add.sprite(400,500,'player');
+    this.cursors = this.input.keyboard.createCursorKeys();
+  },
+
+  setupBackground : function(){
+    this.sea = this.add.tileSprite(0, 0, this.game.width, this.game.height, 'sea');
+    this.sea.autoScroll(0,BasicGame.SEA_SCROLL_SPEED);
+  },
+
+  setupPlayer : function(){
+    this.player = this.add.sprite(this.game.width / 2,this.game.height - 50,'player');
     this.player.anchor.setTo(0.5,0.5);
     this.player.animations.add('fly',[0, 1, 2], 20, true);
     this.player.play('fly');
     this.physics.enable(this.player,Phaser.Physics.ARCADE);
-    this.player.speed = 300;
+    this.player.speed = BasicGame.PLAYER_SPEED;
     this.player.body.collideWorldBounds = true;
     this.player.body.setSize(50, 40, 0, 1);//w,h, x, y
+  },
 
-    this.cursors = this.input.keyboard.createCursorKeys();
-
-    this.bulletPool = this.add.group();
-    this.bulletPool.enableBody = true;
-    this.bulletPool.physicsBodyType = Phaser.Physics.ARCADE;
-    this.bulletPool.createMultiple(100, 'bullet');
-    this.bulletPool.setAll('anchor.x', 0.5);
-    this.bulletPool.setAll('anchor.y', 0.5);
-    this.bulletPool.setAll('outOfBoundsKill', true);
-    this.bulletPool.setAll('checkWorldBounds', true);
-
-    this.nextShotAt = 0;
-    this.shotDelay = 100;
-
+  setupEnemies : function(){
     this.enemyPool = this.add.group();
     this.enemyPool.enableBody = true;
     this.enemyPool.physicsBodyType = Phaser.Physics.ARCADE;
@@ -46,8 +48,24 @@ BasicGame.Game.prototype = {
     });
 
     this.nextEnemyAt = 0;
-    this.enemyDelay = 1000;
+    this.enemyDelay = BasicGame.SPAWN_ENEMY_DELAY;
+  },
 
+  setupBullets : function(){
+    this.bulletPool = this.add.group();
+    this.bulletPool.enableBody = true;
+    this.bulletPool.physicsBodyType = Phaser.Physics.ARCADE;
+    this.bulletPool.createMultiple(100, 'bullet');
+    this.bulletPool.setAll('anchor.x', 0.5);
+    this.bulletPool.setAll('anchor.y', 0.5);
+    this.bulletPool.setAll('outOfBoundsKill', true);
+    this.bulletPool.setAll('checkWorldBounds', true);
+
+    this.nextShotAt = 0;
+    this.shotDelay = BasicGame.SHOT_DELAY;
+  },
+
+  setupExplosions : function(){
     this.explosionPool = this.add.group();
     this.explosionPool.enableBody = true;
     this.explosionPool.physicsBodyType = Phaser.Physics.ARCADE;
@@ -57,21 +75,30 @@ BasicGame.Game.prototype = {
     this.explosionPool.forEach(function (explosion) {
       explosion.animations.add('boom');
     });
+  },
 
-    this.instructions = this.add.text( 400, 450,
+  setupText : function(){
+    this.instructions = this.add.text( this.game.width / 2, this.game.height - 100,
         'Usa las flechas de dirección para moverte.\n Presiona la barra espaciadora para disparar.',
         { font: '20px monospace', fill: '#fff', align: 'center' }
     );
     this.instructions.anchor.setTo(0.5, 0.5);
-    this.instExpire = this.time.now + 10000;
+    this.instExpire = this.time.now + BasicGame.INSTRUCTION_EXPIRE;;
   },
 
   update: function () {
-    this.sea.tilePosition.y += 0.2;
+    this.checkCollisions();
+    this.processPlayerInput();
+    this.spawnEnemies();
+    this.processDelayedEffects();
+  },
 
+  checkCollisions : function(){
     this.physics.arcade.overlap(this.bulletPool, this.enemyPool, this.enemyHit, null, this);
     this.physics.arcade.overlap(this.player, this.enemyPool, this.playerHit, null, this);
+  },
 
+  processPlayerInput: function(){
     this.player.body.velocity.x= 0;
     this.player.body.velocity.y= 0;
 
@@ -92,21 +119,21 @@ BasicGame.Game.prototype = {
     if(this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)){
       this.fire();
     }
-
-    if (this.instructions.exists && this.time.now > this.instExpire) {
-      this.instructions.destroy();
-    }
-
-    this.enemyRespawn();
   },
 
-  enemyRespawn: function(){
+  spawnEnemies : function(){
     if (this.nextEnemyAt < this.time.now && this.enemyPool.countDead() > 0) {
       this.nextEnemyAt = this.time.now + this.enemyDelay;
       var enemy = this.enemyPool.getFirstExists(false);
-      enemy.reset(this.rnd.integerInRange(20, 780), 0);
-      enemy.body.velocity.y = this.rnd.integerInRange(30, 60);
+      enemy.reset(this.rnd.integerInRange(20, this.game.width - 20), 0);
+      enemy.body.velocity.y = this.rnd.integerInRange(BasicGame.ENEMY_MIN_Y_VELOCITY, BasicGame.ENEMY_MAX_Y_VELOCITY);
       enemy.play('fly');
+    }
+  },
+
+  processDelayedEffects: function () {
+    if (this.instructions.exists && this.time.now > this.instExpire) {
+      this.instructions.destroy();
     }
   },
 
@@ -116,7 +143,7 @@ BasicGame.Game.prototype = {
 
       var bullet = this.bulletPool.getFirstExists(false);
       bullet.reset(this.player.x, this.player.y - 20);
-      bullet.body.velocity.y = -500;
+      bullet.body.velocity.y = - BasicGame.BULLET_VELOCITY;
     }
     else{
       //TODO
